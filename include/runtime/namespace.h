@@ -54,7 +54,11 @@ public:
         names.erase(name);
     }
 
-    ~NameSpace() = default;
+    ~NameSpace() {
+        for (auto& p : names) {
+            delete p.second;
+        }
+    }
 private:    
     NameSpace *parent;
     std::unordered_map<std::string, Reference*> names;

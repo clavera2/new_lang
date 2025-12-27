@@ -4,10 +4,22 @@
 #include <cstddef>
 #include "exceptions.h"
 
+// represents an object allocated on the heap
 struct Object;
 
+/*
+Every name within a namespace is mapped to a reference to an object on the heap. There are 3 types of references:
+1) owned referece: the name "owns" the object. Once the name is deleted from the namespace implicitly or explicitly,
+the object is automatically deallocated.
+
+2) borrowed reference: the name borrows the object on the heap without gaining ownership of it. Once the name is deleted
+implicitly or explicitly, the object still resides in the heap until its owning name is deleted.
+
+3) none reference: the name refers to no object, this is automatically set when a move occurs or an  object is deleted from memory
+
+*/
 enum class ReferenceType {
-    Owned, Borrowed
+    Owned, Borrowed, None
 };
 
 class Reference {
@@ -17,11 +29,10 @@ public:
     virtual ReferenceType getType() const = 0;
     virtual bool isOwned() const = 0;
     virtual bool isBorrowed() const = 0;
+    virtual bool isNone() const = 0;
 protected:
     ReferenceType type;
 };
-
-
 
 class OwnedReference : public Reference {
 public:
@@ -35,6 +46,7 @@ public:
 
     bool isOwned() const override;
     bool isBorrowed() const override;
+    bool isNone() const override;
 
     Object* operator->();
 
@@ -69,8 +81,21 @@ public:
     ReferenceType getType() const override;
     bool isOwned() const override;
     bool isBorrowed() const override;
+    bool isNone() const override;
 private:
     OwnedReference* ptr;
+};
+
+class NoneReference : public Reference {
+public:
+    NoneReference() : Reference(ReferenceType::None) {}
+
+    ReferenceType getType() const override;
+    bool isNone() const override;
+    bool isOwned() const override;
+    bool isBorrowed() const override;
+    
+    ~NoneReference() = default;
 };
 
 #endif // RUNTIME_REFERENCE_H

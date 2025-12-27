@@ -16,7 +16,7 @@ enum class TokenKind {
     // symbols
     BINDER, // :=
     EQUALS, DOUBLE_EQUALS, BANG, BANG_EQUALS, SEMI_COLON, OPEN_CURLY, CLOSE_CURLY, OPEN_PAREN, CLOSE_PAREN, 
-    COLON, DOUBLE_COLON,
+    COLON, DOUBLE_COLON, QUESTION_MARK,
 
     // ident 
     IDENT,
@@ -77,7 +77,9 @@ public:
                         tokens.push_back(Token(TokenKind::EQUALS, "=", line_no, walker));
                     }
                     break;
-                case 
+                case '?':
+                    tokens.push_back(Token(TokenKind::QUESTION_MARK, "?", line_no, walker));
+                    break;
             }
             walker++; // advance the walker to the next character in the source stream
         }

@@ -1,11 +1,13 @@
 #ifndef RUNTIME_OBJECT_H
 #define RUNTIME_OBJECT_H
 
-#include "rtti.h"
+#include <string>
+#include "reference.h"
+#include <unordered_map>
 
 class Object {
 public:
-    Object(RTTI* rtti);
+    Object();
     ~Object();
 
     bool containsField(const std::string& name);
@@ -16,7 +18,6 @@ public:
         fields[name] = r; 
     } 
 private:
-    RTTI* rtti;
     std::unordered_map<std::string, Reference*> fields;
 };
 
