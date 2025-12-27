@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 #include <cstring>
+#include <unordered_map>
 #include "compile/exceptions/lexer_exception.h"
 
 enum class TokenKind {
@@ -28,6 +29,19 @@ enum class TokenKind {
 };
 
 
+static const std::unordered_map<std::string, TokenKind> keywords = {
+    {"module", TokenKind::MODULE},
+    {"function", TokenKind::FUNCTION},
+    {"return", TokenKind::RETURN},
+    {"class", TokenKind::CLASS},
+    {"if", TokenKind::IF},
+    {"else", TokenKind::ELSE},
+    {"while", TokenKind::WHILE},
+    {"for", TokenKind::FOR},
+    {"break", TokenKind::BREAK},
+    {"continue", TokenKind::CONTINUE}
+};
+
 struct Token {
     TokenKind kind;
     std::string lexeme;
@@ -43,10 +57,32 @@ public:
     ~Lexer() = default;
 
     void parseLine(const std::string& line) {
+        walker = 0;
         if (line.size() == 0) return;
         while (walker < line.size()) {
             auto ch = line[walker];
+            if (std::isalpha(ch) || ch == '_') {
+                size_t start = walker;
+                std::string ident;
+
+                while (walker < line.size() &&
+                    (std::isalnum(line[walker]) || line[walker] == '_')) {
+                    ident += line[walker];
+                    walker++;
+                }
+
+                auto it = keywords.find(ident);
+                if (it != keywords.end()) {
+                    tokens.emplace_back(it->second, ident, line_no, start);
+                } else {
+                    tokens.emplace_back(TokenKind::IDENT, ident, line_no, start);
+                }
+
+                continue; 
+            } else {
             switch (ch) {
+                case ' ':
+                    break;
                 case '+':
                     tokens.push_back(Token(TokenKind::PLUS, "+", line_no, walker));
                     break;
@@ -58,6 +94,7 @@ public:
                     break;
                 case '&':
                     tokens.push_back(Token(TokenKind::AMPERSAND, "&", line_no, walker));
+                    break;
                 case '\n':
                     tokens.push_back(Token(TokenKind::EOL, "\n", line_no, walker));
                     line_no++;
@@ -66,6 +103,7 @@ public:
                 case ':':
                     if (checkNext(line, ':')) {
                         tokens.push_back(Token(TokenKind::DOUBLE_COLON, "::", line_no, walker));
+                        walker++;
                     } else {
                         tokens.push_back(Token(TokenKind::COLON, ":", line_no, walker));
                     }
@@ -73,6 +111,7 @@ public:
                 case '=':
                     if (checkNext(line, '=')) {
                         tokens.push_back(Token(TokenKind::DOUBLE_EQUALS, "==", line_no, walker));
+                        walker++;
                     } else {
                         tokens.push_back(Token(TokenKind::EQUALS, "=", line_no, walker));
                     }
@@ -80,8 +119,11 @@ public:
                 case '?':
                     tokens.push_back(Token(TokenKind::QUESTION_MARK, "?", line_no, walker));
                     break;
-            }
-            walker++; // advance the walker to the next character in the source stream
+                default:
+                    throw LexerException("Unexpected character: " + std::string(1, ch));        
+            }   
+        }
+              walker++; // advance the walker to the next character in the source stream
         }
     }
 
@@ -91,6 +133,9 @@ public:
         return line[walker + 1] == tk;
     }   
 
+    void emit(TokenKind kind, const std::string& lexeme) {
+        tokens.emplace_back(kind, lexeme, line_no, walker);
+    }
 private:
     size_t walker;
     size_t line_no;
