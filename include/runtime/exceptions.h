@@ -45,4 +45,36 @@ struct StackIndexException : std::exception {
     }
 };
 
+
+struct RuntimeException : std::exception {
+     std::string msg;
+
+    RuntimeException(const std::string& msg) : msg(msg) {}
+
+    const char* what() const noexcept override {
+        return msg.c_str();
+    }
+};
+
+
+struct StackUnderflowException : std::exception {
+     std::string msg;
+
+    StackUnderflowException(const std::string& msg) : msg(msg) {}
+
+    const char* what() const noexcept override {
+        return msg.c_str();
+    }
+};
+
+struct StackOverflowException : std::exception {
+     std::string msg;
+
+    StackOverflowException(const std::string& msg) : msg(msg) {}
+
+    const char* what() const noexcept override {
+        return msg.c_str();
+    }
+};
+
 #endif

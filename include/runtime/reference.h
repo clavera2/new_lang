@@ -27,11 +27,34 @@ public:
     Reference(ReferenceType type);
     virtual ~Reference() = default;
     virtual ReferenceType getType() const = 0;
+    virtual Object* operator->() = 0;
     virtual bool isOwned() const = 0;
     virtual bool isBorrowed() const = 0;
     virtual bool isNone() const = 0;
+    virtual bool isDangling() const = 0;
 protected:
     ReferenceType type;
+};
+
+
+// control block
+struct cBlock {
+    bool isAlive;
+    Object* obj;
+    size_t refCount;
+
+    cBlock(Object* obj) : isAlive(true), obj(obj), refCount(1) {}
+
+    // should only be called when ref_count == 0
+    ~cBlock() = default;
+
+    friend class OwnedReference;
+private:
+    // should be called only by OwnedReferences
+    void deleteObject() {
+        delete obj;
+        isAlive = false;
+    }
 };
 
 class OwnedReference : public Reference {
@@ -47,8 +70,9 @@ public:
     bool isOwned() const override;
     bool isBorrowed() const override;
     bool isNone() const override;
+    bool isDangling() const override; 
 
-    Object* operator->();
+    Object* operator->() override;
 
     ReferenceType getType() const override;
 
@@ -58,7 +82,9 @@ public:
     ~OwnedReference();
 private:
     friend class BorrowedReference;
-    Object* ptr;
+    friend void drop(OwnedReference&);
+    //Object* ptr;
+    cBlock* block;
 };
 
 // a borrowed reference is created from an Owned reference (via. &owner)
@@ -74,16 +100,18 @@ public:
     BorrowedReference& operator=(OwnedReference& owner);
 
     // accesses the borrowed object
-    Object* operator->();
+    Object* operator->() override;
 
-    ~BorrowedReference() = default;
+    ~BorrowedReference() { drop(*this); }
 
     ReferenceType getType() const override;
     bool isOwned() const override;
     bool isBorrowed() const override;
     bool isNone() const override;
+    bool isDangling() const override;
 private:
-    OwnedReference* ptr;
+    cBlock* block;
+    friend void drop(BorrowedReference&);
 };
 
 class NoneReference : public Reference {
@@ -94,8 +122,16 @@ public:
     bool isNone() const override;
     bool isOwned() const override;
     bool isBorrowed() const override;
+    bool isDangling() const override;
+    Object* operator->() override {
+        throw NullPointerException("reference is none");
+    }
     
     ~NoneReference() = default;
 };
+
+void drop(OwnedReference& ref);
+
+void drop(BorrowedReference& ref);
 
 #endif // RUNTIME_REFERENCE_H

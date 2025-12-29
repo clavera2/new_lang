@@ -2,15 +2,17 @@
 
 Reference::Reference(ReferenceType type) : type(type) {}
 
-OwnedReference::OwnedReference(Object* o) : Reference(ReferenceType::Owned), ptr(o) {}
-OwnedReference::OwnedReference(OwnedReference&& o) : Reference(ReferenceType::Owned), ptr(o.ptr) {
+OwnedReference::OwnedReference(Object* o) : Reference(ReferenceType::Owned), block(new cBlock(o)) {}
+
+OwnedReference::OwnedReference(OwnedReference&& o) : Reference(ReferenceType::Owned), block(o.block) {
     o.type = ReferenceType::None;
-    o.ptr = nullptr;
+    o.block = nullptr;
 }
+
 OwnedReference& OwnedReference::operator=(OwnedReference&& o) {
     if (this != &o) {
-            delete ptr;
-            ptr = o.ptr; o.ptr = nullptr;
+            drop(*this);
+            this->block = o.block; o.block = nullptr;
             o.type = ReferenceType::None;
         }
     return *this;
@@ -19,9 +21,10 @@ OwnedReference& OwnedReference::operator=(OwnedReference&& o) {
 bool OwnedReference::isOwned() const { return true; }
 bool OwnedReference::isBorrowed() const { return false; }
 bool OwnedReference::isNone() const { return false; }
+bool OwnedReference::isDangling() const { return block == nullptr; } // used by syntactive sugar: given reference x (&x), x?. Can only be dangling after a move
 
 Object *OwnedReference::operator->() {
-    return ptr;
+    return block->obj;
 }
 
 ReferenceType OwnedReference::getType() const {
@@ -29,47 +32,69 @@ ReferenceType OwnedReference::getType() const {
 }
 
 OwnedReference::~OwnedReference() {
-    delete ptr;
-    ptr = nullptr;
+    drop(*this);
 }
 
 
 BorrowedReference::BorrowedReference(OwnedReference* o) :  Reference(ReferenceType::Borrowed) {
-    this->ptr = ptr;
+    this->block = o->block; // they both point to the same cblock
+    block->refCount++;
 }
 
 BorrowedReference::BorrowedReference(const BorrowedReference& b)  : Reference(ReferenceType::Borrowed) { 
-    ptr = b.ptr;
+    block = b.block;
+    block->refCount++;
 }
 
 
 BorrowedReference& BorrowedReference::operator=(const BorrowedReference& b) {
     if (this != &b) {
-        ptr = b.ptr;
+        drop(*this);
+        block = b.block;
+        block->refCount++;
     }
     return *this;
 }
 
 
 BorrowedReference& BorrowedReference::operator=(OwnedReference& owner) {
-    ptr = &owner;
+    drop(*this);
+    block = owner.block;
+    block->refCount++;
     return *this;
 } 
 
 Object* BorrowedReference::operator->() {
-    if (ptr == nullptr || ptr->getType() == ReferenceType::None) {
-        throw NullPointerException("owner of object has gone out of scope");
-    } else {
-        return ptr->ptr;
-    }
+    if (! block || ! block->isAlive) throw NullPointerException("owner of object has gone out of scope");
+    return block->obj;
 }
 
 ReferenceType BorrowedReference::getType() const { return ReferenceType::Borrowed; }
 bool BorrowedReference::isOwned() const { return false; }
 bool BorrowedReference::isBorrowed() const { return true; }
 bool BorrowedReference::isNone() const { return false; }
+bool BorrowedReference::isDangling() const { return ! block || ! block->isAlive; }
 
 ReferenceType NoneReference::getType() const { return ReferenceType::None; }
 bool NoneReference::isBorrowed() const { return false; }
 bool NoneReference::isNone() const { return true; }
 bool NoneReference::isOwned() const { return false; }
+bool NoneReference::isDangling() const { return true; }
+
+void drop(OwnedReference& ref) {
+    ref.block->refCount--;
+    if (ref.block->refCount != 0) {
+        delete ref.block->obj;
+        ref.block->isAlive = false;
+        ref.block->obj = nullptr;
+    } else { // this means no other reference to the object, safe to delete cblock;
+        delete ref.block;
+    }
+}
+
+void drop(BorrowedReference& ref) {
+    ref.block->refCount--;
+    if (ref.block->refCount == 0) {
+        delete ref.block;
+    } // else do nothing
+}

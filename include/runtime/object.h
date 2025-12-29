@@ -6,10 +6,8 @@
 #include <unordered_map>
 
 class Object {
-public:
-    Object();
-    ~Object();
-
+public: 
+    Object() = default;
     bool containsField(const std::string& name);
 
     Reference* getField(const std::string& name);
@@ -17,9 +15,10 @@ public:
     void setField(const std::string& name, Reference* r) {
         fields[name] = r; 
     } 
-private:
+
+    ~Object();
+protected:
     std::unordered_map<std::string, Reference*> fields;
 };
-
 
 #endif

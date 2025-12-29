@@ -1,10 +1,9 @@
 #include "runtime/object.h"
 
-Object::Object(RTTI* rtti) : rtti(rtti) {}
 
 Object::~Object() {
     for (const auto& p : fields) {
-        if (p.second->isOwned()) delete p.second;
+        delete p.second;
     }
 }
 

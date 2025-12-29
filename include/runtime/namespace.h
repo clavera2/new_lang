@@ -1,8 +1,8 @@
 #ifndef RUNTIME_NAMESPACE_H
 #define RUNTIME_NAMESPACE_H
 
-#include "./reference.h"
-#include "unordered_map"
+//#include "./reference.h"
+#include "./object.h"
 
 
 /*
@@ -11,24 +11,24 @@ class, function, enum, module. The global namespace is a special namespace whose
 the namespace system forms a heirarchical structure. The runtime keeps track of namespaces and ensures that no namespace can access the names of its child
 namespace. 
 */
-class NameSpace {
+class NameSpace : public Object {
 public:
-    NameSpace(NameSpace *parent = nullptr) : parent(parent) {}
+    NameSpace(NameSpace *parent = nullptr) : Object(), parent(parent) {}
 
     void addName(const std::string& name, Reference* ref) {
-        names[name] = ref;
+        setField(name, ref);
     } 
 
     // just checks if the name is in the current namespace and doesnt check parent
     bool containsNameInCurrent(const std::string& name) const {
-        return names.find(name) != names.end();
+        return fields.find(name) != fields.end();
     }
 
     Reference* get(const std::string& name) {
         if (parent == nullptr) {
-            if (names.count(name) == 0) throw NameException("unable to find name");
-            return names[name];
-        } else if (containsNameInCurrent(name)) return names[name];
+            if (! containsName(name)) throw NameException("unable to find name");
+            return fields[name];
+        } else if (containsNameInCurrent(name)) return fields[name];
         else {
             return parent->get(name);
         }
@@ -36,7 +36,7 @@ public:
 
     Reference* getInCurrent(const std::string& name) {
         if (! containsNameInCurrent(name)) throw NameException("no name in current namespace");
-        return names[name];
+        return fields[name];
     }
 
     // also checks parent 
@@ -51,17 +51,15 @@ public:
     }
 
     void deleteName(const std::string& name) {
-        names.erase(name);
-    }
-
-    ~NameSpace() {
-        for (auto& p : names) {
-            delete p.second;
+        if (containsNameInCurrent(name)) {
+            delete fields[name];
+            fields.erase(name);
         }
     }
+    // calls Object::~Object() to clean up fields;
+    ~NameSpace() = default;
 private:    
     NameSpace *parent;
-    std::unordered_map<std::string, Reference*> names;
 };
 
 #endif

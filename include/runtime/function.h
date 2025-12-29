@@ -1,53 +1,41 @@
 #ifndef RUNTIME_TYPES_H
 #define RUNTIME_TYPES_H
 
-#include <string>
-#include "reference.h"
-#include <vector>
+#include "./object.h"
+#include "./rt.h"
 
-struct Frame {
-    std::vector<Reference *> st_frame;
+/*
+Given a function definition in source code: 
 
-    Frame(const std::vector<Reference *>& fr) : st_frame(fr) {}
-    ~Frame() = default;
+add := function(x, y) {
+    return x + y;
+}
 
-    Reference* operator[](size_t idx) {
-        if (idx >= st_frame.size()) throw StackIndexException("invalid stack frame index access");
-        return st_frame[idx];
-    }
+after compilation:
 
-    void push(Reference* r) {
-        st_frame.push_back(r);
-    }
-};
+SymTab entry:
+|  add |  #45 | -> the symbol "add" resides in the bytecode file index #45
 
-enum class FunctionType {
-    FREE, 
-    INSTANCE,
-    STATIC
-};
+Bytecode representation:
+#45 add:
+    // given the fact that the caller already pushed arguments unto the runtime stack
+    CALL Integer::add()
+    RET
+*/
 
-// base class for all function types
-class Function {
+using Address = size_t; // represents an index in a bytecode file
+
+class Function : public Object {
 public:
-    Function(const std::string& name, FunctionType type);
-    virtual ~Function() = default;
-    virtual FunctionType getType() const = 0;
-    virtual bool isInstanceMethod() const = 0;
-    virtual bool isStaticMethod() const = 0;
-    virtual bool isFreeFunction() const = 0;
-protected:
-    std::string name;
-    FunctionType type;
-};
+    Function(size_t arg_size, Address pc) : arg_size(arg_size), pc(pc) {}
 
-// represents a function that is dependent on an instance of a class
-class InstanceMethod {
-
-};
-
-class StaticMethod {
-
+    // sets the runtime pc to this->pc
+    void call(Runtime& rt) {
+        rt.pc = pc;
+    }
+private:
+    size_t arg_size;
+    Address pc;
 };
 
 #endif
