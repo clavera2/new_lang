@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 #include <cstring>
+#include <fstream>
 #include <unordered_map>
 #include "compile/exceptions/lexer_exception.h"
 
@@ -53,8 +54,22 @@ struct Token {
 
 class Lexer {
 public:
-    Lexer() : walker(0), line_no(0) {}
+    Lexer(const std::string& source) : source(source), walker(0), line_no(0) {}
     ~Lexer() = default;
+
+    void parseAll() {
+        std::ifstream file = std::ifstream(source);
+        if (! file.is_open())  {
+            std::cout << "error: could not open source file\n";
+            std::exit(1);
+        }
+
+        std::string line;
+        while (std::getline(file, line)) {
+            parseLine(line);
+            line_no++;
+        }
+    }
 
     void parseLine(const std::string& line) {
         walker = 0;
@@ -83,6 +98,21 @@ public:
             switch (ch) {
                 case ' ':
                     break;
+                case '{':
+                    tokens.push_back(Token(TokenKind::OPEN_CURLY, "{", line_no, walker));
+                    break;
+                case '}':
+                    tokens.push_back(Token(TokenKind::CLOSE_CURLY, "}", line_no, walker));
+                    break;
+                case '(':
+                    tokens.push_back(Token(TokenKind::OPEN_PAREN, "(", line_no, walker));
+                    break;
+                case ')':
+                    tokens.push_back(Token(TokenKind::CLOSE_PAREN, ")", line_no, walker));
+                    break;
+                case ';':
+                    tokens.push_back(Token(TokenKind::SEMI_COLON, ";", line_no, walker));
+                    break;
                 case '+':
                     tokens.push_back(Token(TokenKind::PLUS, "+", line_no, walker));
                     break;
@@ -104,6 +134,8 @@ public:
                     if (checkNext(line, ':')) {
                         tokens.push_back(Token(TokenKind::DOUBLE_COLON, "::", line_no, walker));
                         walker++;
+                    } else if (checkNext(line, '=')) {
+                        tokens.push_back(Token(TokenKind::BINDER, ":=", line_no, walker));
                     } else {
                         tokens.push_back(Token(TokenKind::COLON, ":", line_no, walker));
                     }
@@ -129,8 +161,7 @@ public:
 
     // checks if the next character in line is tk
     bool checkNext(const std::string& line, char tk) {
-        if (walker + 1 >= line.size()) throw LexerException("unable to scan next character in source stream");
-        return line[walker + 1] == tk;
+        return walker + 1 < line.size() && line[walker + 1] == tk;
     }   
 
     void emit(TokenKind kind, const std::string& lexeme) {
@@ -140,6 +171,7 @@ private:
     size_t walker;
     size_t line_no;
     std::vector<Token> tokens;
+    std::string source;
 };
 
 #endif

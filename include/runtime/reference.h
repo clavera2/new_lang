@@ -76,9 +76,6 @@ public:
 
     ReferenceType getType() const override;
 
-
-    void* operator new(size_t) = delete; 
-
     ~OwnedReference();
 private:
     friend class BorrowedReference;
@@ -129,6 +126,8 @@ public:
     
     ~NoneReference() = default;
 };
+
+void drop(Reference*);
 
 void drop(OwnedReference& ref);
 

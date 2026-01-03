@@ -4,41 +4,19 @@
 #include <string>
 #include <unordered_map>
 #include "./exceptions.h"
+#include "./namespace.h"
 
-enum class AccessMode {
-    PUBLIC, PRIVATE, PACKAGE
+
+struct SynTab {
+
 };
 
-enum class SymKind {
-    FUNCTION, MODULE, OBJECT, CLASS, ENUM
-};
-
-struct SymInfo {
-    std::string name;
-    AccessMode mode;
-    SymKind kind;
-
-    SymInfo(const std::string& name, AccessMode mode, SymKind kind) : name(name), mode(mode), kind(kind) {}
-
-    bool isPublic() const { return mode == AccessMode::PUBLIC; }
-    bool isPrivate() const { return mode == AccessMode::PRIVATE; }
-    bool isPackagePrivate() const { return mode == AccessMode::PACKAGE; }
-};
-
-// contains information about the names defined within the symbol table
-class SymTable {
-private:
-    std::unordered_map<std::string, SymInfo> map;
+// a module is just a namespace as a file
+class Module : public NameSpace {
 public:
-    SymTable() = default;
-
-    void addSymbol(const std::string& name, SymInfo info) {
-        if (map.count(name) != 0) throw NameException("cannot have two symbols with the same name");
-        map[name] = info;
-    }
-
-    ~SymTable() = default;
+    Module(const std::string& name, NameSpace* parent = nullptr) : NameSpace(parent), name(name) {}
+private:
+    std::string name;
 };
-
 
 #endif

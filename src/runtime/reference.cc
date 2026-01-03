@@ -83,11 +83,17 @@ bool NoneReference::isDangling() const { return true; }
 
 void drop(OwnedReference& ref) {
     ref.block->refCount--;
+    // if the cblock refcount is > 0, that means there are still shared references to the block
+    // since ref owns the object, it can delete it, making the shared references dangling
+    // this tradeoff is fine as we dont have compile time borrowchecking feature,
+    // forcing the each borrowed reference to be checked via ? operator before being used
     if (ref.block->refCount != 0) {
         delete ref.block->obj;
         ref.block->isAlive = false;
         ref.block->obj = nullptr;
-    } else { // this means no other reference to the object, safe to delete cblock;
+    } else { // this means no other reference to the object, safe to delete cblock & object;
+        delete ref.block->obj;
+        ref.block->obj = nullptr;
         delete ref.block;
     }
 }
@@ -97,4 +103,15 @@ void drop(BorrowedReference& ref) {
     if (ref.block->refCount == 0) {
         delete ref.block;
     } // else do nothing
+}
+
+void drop(Reference* r) {
+    switch (r->getType()) {
+        case ReferenceType::Owned:
+            auto owned = dynamic_cast<OwnedReference*>(r);
+            drop(*owned);
+        case ReferenceType::Borrowed:
+            auto borrowed = dynamic_cast<BorrowedReference*>(r);
+            drop(*borrowed);
+    }
 }

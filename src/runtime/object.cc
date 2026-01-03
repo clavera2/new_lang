@@ -3,7 +3,7 @@
 
 Object::~Object() {
     for (const auto& p : fields) {
-        delete p.second;
+        drop(p.second);
     }
 }
 

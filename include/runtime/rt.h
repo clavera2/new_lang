@@ -4,10 +4,13 @@
 #include <cstddef>
 #include <stack>
 #include "./function.h"
+#include "./globals.h"
 
 #define MAX_STACK_SIZE 1024// to be determined
 
 using Address = size_t;
+
+constexpr Address END_ADDRESS = -1;
 
 class Runtime {
 public:
@@ -29,6 +32,15 @@ public:
         while (! stack.empty()) {
             Reference* r = pop();
             delete r;
+        }
+    }
+
+    // starts the VM
+    void run() {
+        initGlobals();
+        while (pc != END_ADDRESS) {
+            
+            pc++;
         }
     }
 private:

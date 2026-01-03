@@ -13,7 +13,7 @@ namespace.
 */
 class NameSpace : public Object {
 public:
-    NameSpace(NameSpace *parent = nullptr) : Object(), parent(parent) {}
+    NameSpace(NameSpace *parent = nullptr) : Object(TypeInfo::Namespace), parent(parent) {}
 
     void addName(const std::string& name, Reference* ref) {
         setField(name, ref);
