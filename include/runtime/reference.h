@@ -125,6 +125,11 @@ public:
     }
     
     ~NoneReference() = default;
+
+    static Reference* getNone() {
+        static NoneReference none;
+        return &none;
+    }
 };
 
 void drop(Reference*);

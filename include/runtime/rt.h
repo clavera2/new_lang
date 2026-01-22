@@ -12,41 +12,81 @@ using Address = size_t;
 
 constexpr Address END_ADDRESS = -1;
 
+enum class Opcode {
+
+};
+
+struct Instruction {
+    Opcode op;
+    size_t operand; // address, symbol index, etc.
+};
+
+struct Frame {
+    Address returnAddress;
+    size_t base;
+};
+
+
+
 class Runtime {
 public:
-    Runtime() : pc(0), stack() {}
+    Runtime(const std::vector<Instruction>& code) : ip(0), code(code) {}
 
     void push(Reference* ref) {
-        if (stack.size() == MAX_STACK_SIZE) throw ("stack overflow exception");
-        stack.push(ref);
+        valueStack.push_back(ref);
     }
 
     Reference* pop() {
-        if (stack.size() == 0) throw StackUnderflowException("stack underflow exception");
-        auto r = stack.top();
-        stack.pop();
+        auto* r = valueStack.back();
+        valueStack.pop_back();
         return r;
     }
 
-    void clear() {
-        while (! stack.empty()) {
-            Reference* r = pop();
-            delete r;
-        }
+    Reference* peek() {
+        return valueStack.back();
+    }
+
+     void pushFrame(Address entry, size_t arity) {
+        Frame frame;
+        frame.returnAddress = ip;
+        frame.base = valueStack.size() - arity;
+
+        callStack.push(frame);
+        ip = entry;
+    }
+
+    void popFrame() {
+        auto frame = callStack.top();
+        callStack.pop();
+
+        Reference* ret = pop();
+        valueStack.resize(frame.base);
+
+        push(ret);
+        ip = frame.returnAddress;
     }
 
     // starts the VM
     void run() {
         initGlobals();
-        while (pc != END_ADDRESS) {
-            
-            pc++;
+        while (ip != END_ADDRESS) {
+            // FDE cycle continuously runs until pc == END_ADDRESS
+            const Instruction& instruction = code[ip++];
         }
     }
+
+    void pushStackFrame(Address ret, size_t arity) {
+
+    }
 private:
-    friend class Function;
-    Address pc;
-    std::stack<Reference*> stack;
+    Reference* resolveFunction(size_t symbol);
+
+private:
+    const std::vector<Instruction>& code;
+    Address ip;
+
+    std::vector<Reference*> valueStack;
+    std::stack<Frame> callStack;
 };
 
 #endif

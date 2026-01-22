@@ -110,6 +110,7 @@ void drop(Reference* r) {
         case ReferenceType::Owned:
             auto owned = dynamic_cast<OwnedReference*>(r);
             drop(*owned);
+            break;
         case ReferenceType::Borrowed:
             auto borrowed = dynamic_cast<BorrowedReference*>(r);
             drop(*borrowed);

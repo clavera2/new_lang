@@ -2,17 +2,49 @@
 #define RUNTIME_TYPE_H
 
 #include "./function.h"
+#include "./reference.h"
+#include "./object.h"
 
-// set on an object field __type__
+enum class TypeKind {
+    Function,
+    Object,
+    Type,
+    Module,
+    Namespace
+};
+
 class Type : public Object {
-public: 
-    Type(const std::string& name, Reference* base) : Object(TypeInfo::Type), name(name), base(base) {}
-    ~Type() {
-        delete base; // safe because base should always be either a borrowed reference or none reference
+public:
+    Type(TypeKind kind, const std::string& name) : kind(kind), name(name) {}
+
+    /*
+    This operator creates an instance of this Type object. In a call Type::operator()();
+    the result is just another regular type object, derived classes (like String) should
+    override this operator overload in order to instantiate string objects
+    */
+    virtual Object* operator()() {
+        Object* obj = new Object();
+        obj->setField("__type__", getType());
+        return obj;
     }
 private:
+    TypeKind kind;
     std::string name;
-    Reference *base;
+public:
+    static Reference* getType() {
+        static OwnedReference typeOwner(new Type(TypeKind::Type, "type"));
+
+        // bootstrap __type__ once
+        static bool initialized = false;
+        if (!initialized) {
+            typeOwner->setField("__type__", new BorrowedReference(&typeOwner));
+            initialized = true;
+        }
+
+        static BorrowedReference typeBorrow(&typeOwner);
+        return &typeBorrow;
+    }
 };
+
 
 #endif

@@ -1,7 +1,7 @@
 #ifndef RUNTIME_TYPES_H
 #define RUNTIME_TYPES_H
 
-#include "./namespace.h"
+#include "./type.h"
 #include "./rt.h"
 #include <vector>
 #include <optional>
@@ -32,56 +32,17 @@ enum class Opcode {
     COPY // (COPY a b) copy the borrowed/none reference from name a to name b
 };
 
-class Instruction {
+using Address = size_t;
+
+class Function : public Object {
 public:
-    static Instruction makeUnary(Opcode op) {
-        // dummy impl for now
-        switch (op) {
-            case Opcode::PUSH:
-                return Instruction(Opcode::PUSH);
-        }
-        return Instruction(Opcode::PUSH);
+    Function(Address __start__) : __start__(__start__) {}
+
+    Reference* operator()(Runtime& rt) const {
+        rt.pc = __start__;
     }
-private:
-    Opcode opcode;
-    std::optional<std::vector<std::string>> operands;
-    Instruction(Opcode opcode,  std::optional<std::vector<std::string>> operands = std::nullopt) : opcode(opcode), operands(operands) {}
-};
-
-using Address = size_t; // represents an index in a bytecode file
-
-/* 
-represents a sequence of bytecode with addresses in the format #ADDRESS BYTE_CODE
-e.g: #1 PUSH 1
-     #2 PUSH 2
-     #3 ADD
-     #4 RET
-*/
-class code_object {
-public:
-    code_object();
-    ~code_object() = default;
-private:
-    friend class Runtime;
-    friend class Function;
-    Address _start; // the starting address of the code object
-    std::unordered_map<Address, Instruction> instructions;
-};
-
-class Function : public NameSpace {
-public:
-    Function(const std::string& name, size_t arg_size) : name(name), arg_size(arg_size) {}
-
-    // sets the runtime pc to this->pc
-    void call(Runtime& rt) {
-        rt.pc = _code._start;
-    }
-
-    const std::string& getName() const { return name; }
-private:
-    std::string name;
-    size_t arg_size;
-    code_object _code;
+private:   
+    Address __start__;
 };
 
 #endif
